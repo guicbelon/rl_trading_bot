@@ -24,8 +24,8 @@ class RLDatabase():
         end_train = pd.to_datetime(end_train)
         if start_train is None:
             start_train = end_train - timedelta(days=10*365)
-        start_train = pd.to_datetime(start_train)
-        self.start_train = start_train
+        self.original_start_train = pd.to_datetime(start_train)
+        self.start_train = self.original_start_train - timedelta(days=1*365)
         self.end_train = end_train
         self.end_test = end_test
         self.test_time_window = test_time_window
@@ -35,13 +35,12 @@ class RLDatabase():
         self.tickers = tickers
         self.number_of_tickers_to_consider = number_of_tickers_to_consider
         self.tickers = tickers
-        self.base_df_columns = ['USD/BRL',  'IBOV',  'SPX', 'DJI', 'NASDAQ',
-                                'CDI', 'IPCA', 'SELIC', 'IGPM']
+        self.base_df_columns = ['USD/BRL',  'IBOV',  'SPX', 'DJI', 'NASDAQ']#'CDI', 'IPCA', 'SELIC', 'IGPM']
         self.minimum_of_years = 0.8*(self.end_train - 
                                      self.start_train).days/365
         self.ohlcv_dfs= {}
         self.TA_dfs = {}
-        self.specif_dfs={}
+        self.specific_dfs={}
         self.general_df = None
         self.test_df = None
 
@@ -152,9 +151,9 @@ class RLDatabase():
         kalman_df = self.df_kalman(df, drop_index=True)
         return pd.concat([sma_df, ema_df, kalman_df], axis=1)
     
-    def _create_personalized_base_df(self):
+    def _create_personalized_base_df(self, rolling_corr_periods:int=30):
         personalized_df = pd.DataFrame()
-        close_info = self.close_df
+        close_info = self.close_df   
         for col in self.base_df_columns:
             base_info = self.base_df[[col+'_close']]
             moving_info = self.create_moving_info(base_info)
@@ -169,11 +168,21 @@ class RLDatabase():
                 else:
                     values_corr += corr.values[0,]
             values_corr = np.absolute(values_corr[1:])
-            max_index = np.argmax(values_corr)
+            max_index = np.argmax(values_corr) 
             best_moving_df = df[df.columns[max_index+1]]
             best_moving_df.name = col
             personalized_df = pd.concat([personalized_df, best_moving_df], axis=1)
-        self.personalized_df = personalized_df.dropna()
+        personalized_df = personalized_df.dropna()
+        for ticker in close_info.columns:
+            df_corr = pd.DataFrame()
+            for col in personalized_df.columns:
+                ticker_info = close_info[[ticker]]
+                best_moving_df = personalized_df[[col]]
+                df = pd.concat([ticker_info,best_moving_df], axis=1)
+                df = df.dropna()
+                rolling_corr = df[ticker].rolling(window=rolling_corr_periods).corr(df[col])
+                df_corr[col] = rolling_corr
+            self.specific_dfs[ticker] = df_corr.dropna()
     
     def create_general_database(self):
         if self.general_df is not None:
@@ -194,7 +203,8 @@ class RLDatabase():
         for ticker in self.tickers:
             ohlcv = self.ohlcv_dfs[ticker]
             ta_df = self.TA_dfs[ticker]
-            df = pd.concat([ohlcv, ta_df, self.personalized_df], axis=1)
+            specific_df = self.specific_dfs[ticker]
+            df = pd.concat([ohlcv, ta_df, specific_df], axis=1)
             df.index = pd.to_datetime(df.index)
             df["tic"] = ticker
             df['date'] = df.index
@@ -221,7 +231,13 @@ class RLDatabase():
     
     def create_train_database(self):
         general_df = self.create_general_database()
-        train_df = general_df.loc[general_df['date'] <= self.end_train]
+        train_df = general_df[(general_df['date']>=self.original_start_train) 
+                              & (general_df['date'] <= self.end_train)]
+        train_df.reset_index(inplace=True)
+        indexes =[]
+        for i in range(0, len(train_df)//len(self.tickers)):
+            indexes +=[i]*len(self.tickers)
+        train_df.index = indexes
         return train_df
     
     def create_test_database(self):
@@ -235,6 +251,10 @@ class RLDatabase():
             first_index_to_consider -= (self.test_time_window - 1)*time_window_multiplier
         test_df = general_df.loc[first_index_to_consider:]
         test_df.index = test_df.index - first_index_to_consider
+        indexes =[]
+        for i in range(0, len(test_df)//len(self.tickers)):
+            indexes +=[i]*len(self.tickers)
+        test_df.index = indexes
         return test_df
     
     def create_train_test_database(self):
