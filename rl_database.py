@@ -34,7 +34,6 @@ class RLDatabase():
         self.close_df = pd.DataFrame()
         self.tickers = tickers
         self.number_of_tickers_to_consider = number_of_tickers_to_consider
-        self.tickers = tickers
         self.base_df_columns = ['USD/BRL',  'IBOV',  'SPX', 'DJI', 'NASDAQ']#'CDI', 'IPCA', 'SELIC', 'IGPM']
         self.minimum_of_years = 0.8*(self.end_train - 
                                      self.start_train).days/365
@@ -45,18 +44,18 @@ class RLDatabase():
         self.test_df = None
 
     def _create_ohlcv_dfs(self):
-        ohlcv = self.data.get_info(
-            tickers=self.tickers,
-            open_date=self.start_train, 
-            close_date=self.end_test, 
-            info = 'ohlcv')
-        for ticker in self.tickers:
+        for ticker in self.tickers:            
             cols = [ticker+'_open', 
                     ticker+'_high', 
                     ticker+'_low', 
                     ticker+'_close', 
                     ticker+'_volume' ]
             try:
+                ohlcv = self.data.get_info(
+                    ticker,
+                    open_date=self.start_train, 
+                    close_date=self.end_test, 
+                    info = 'ohlcv')
                 ticker_df = ohlcv[cols]                
                 ticker_df.columns =["open","high","low","close","volume"]
                 ticker_df = ticker_df.dropna()
@@ -233,7 +232,7 @@ class RLDatabase():
         general_df = self.create_general_database()
         train_df = general_df[(general_df['date']>=self.original_start_train) 
                               & (general_df['date'] <= self.end_train)]
-        train_df.reset_index(inplace=True)
+        train_df.reset_index(drop=True)
         indexes =[]
         for i in range(0, len(train_df)//len(self.tickers)):
             indexes +=[i]*len(self.tickers)
