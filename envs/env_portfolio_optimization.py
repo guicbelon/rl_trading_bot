@@ -86,7 +86,7 @@ class PortfolioOptimizationEnv(gym.Env):
         tic_column="tic",
         time_window=1,
         cwd="./",
-        new_gym_api=False,
+        new_gym_api=True,
     ):
         """Initializes environment's instance.
 
@@ -157,7 +157,7 @@ class PortfolioOptimizationEnv(gym.Env):
         self.episode_length = len(self._sorted_times) - time_window + 1
 
         # define action space
-        self.action_space = spaces.Box(low=0, high=1, shape=(action_space,))
+        self.action_space = gym.spaces.box.Box(low=0, high=1, shape=(action_space,))
 
         # define observation state
         if self._return_last_action:
@@ -165,7 +165,7 @@ class PortfolioOptimizationEnv(gym.Env):
             # is defined
             self.observation_space = spaces.Dict(
                 {
-                    "state": spaces.Box(
+                    "state": gym.spaces.box.Box(
                         low=-np.inf,
                         high=np.inf,
                         shape=(
@@ -174,13 +174,13 @@ class PortfolioOptimizationEnv(gym.Env):
                             self._time_window,
                         ),
                     ),
-                    "last_action": spaces.Box(low=0, high=1, shape=(action_space,)),
+                    "last_action": gym.spaces.box.Box(low=0, high=1, shape=(action_space,)),
                 }
             )
         else:
             # if information about last action is not relevant,
             # a 3D observation space is defined
-            self.observation_space = spaces.Box(
+            self.observation_space = gym.spaces.box.Box(
                 low=-np.inf,
                 high=np.inf,
                 shape=(len(self._features), self.portfolio_size, self._time_window),
@@ -362,7 +362,7 @@ class PortfolioOptimizationEnv(gym.Env):
             return self._state, self._reward, self._terminal, False, self._info
         return self._state, self._reward, self._terminal, self._info
 
-    def reset(self):
+    def reset(self,seed=None):
         """Resets the environment and returns it to its initial state (the
         fist date of the dataframe).
 

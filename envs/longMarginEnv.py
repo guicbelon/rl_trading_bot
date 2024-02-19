@@ -1,4 +1,4 @@
-import gymnasium as gym
+import gymnasium
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,7 +8,7 @@ from gymnasium.utils import seeding
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.logger import Logger, KVWriter, CSVOutputFormat
 
-class LongMarginTradingEnv(gym.Env):
+class LongMarginTradingEnv(gymnasium.Env):
     """A stock trading environment for OpenAI gym"""
 
     metadata = {"render.modes": ["human"]}

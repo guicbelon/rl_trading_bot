@@ -2,6 +2,7 @@ import gymnasium as gym
 import numpy as np
 import pandas as pd
 from gym import spaces
+from gym.utils import seeding
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 class Finance(gym.Env):
@@ -55,8 +56,9 @@ class Finance(gym.Env):
         self._create_returns_df()
         
         
+    
         
-    def reset(self):
+    def reset(self, seed=None):
         self.time_index = self.time_window -1
         self.memory = {}
         self.portifolio_value = self.initial_amount
@@ -67,6 +69,7 @@ class Finance(gym.Env):
         self.terminal= False
         self.reward = 0
         return self.state
+    
         
     def _get_current_state_from_date(self, date):
         df_selected = self.df[self.df[

@@ -39,7 +39,6 @@ class TensorboardCallback(BaseCallback):
             self.logger.record(key="train/reward", value=self.locals["reward"][0])
         return True
 
-
 class DRLAgent:
     """Provides implementations for DRL algorithms
 
@@ -112,11 +111,11 @@ class DRLAgent:
             print("Successfully load model", cwd)
         except BaseException:
             raise ValueError("Fail to load agent!")
-        state = self.env.reset()
+        state, info = self.env.reset()
         done = False
         while not done:
             last_action = self.pvm.retrieve()
             action = model.predict(state, deterministic=deterministic)[0]
-            state, reward, done, _ = self.env.step(action)
+            state, reward, done,_,__ = self.env.step(action)
             self.pvm.add(action)
         return self.pvm
