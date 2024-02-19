@@ -38,17 +38,17 @@ class Finance(gym.Env):
         
         self.tickers = df[tic_column].unique()
         self.dates = sorted(df[time_column].unique())
-        self.initial_date,self.last_date = self.dates[0],self.dates[-1]
+        self.last_date = self.dates[-1]
         
         self.portfolio_size = len(self.tickers)
         action_space = 1 + self.portfolio_size
         self.action_space = spaces.Box(low=0, high=1, shape=(action_space,))
 
         self.episode_length = len(self.dates) - time_window -1
-        
+        self.df_returns = None
         self.observation_space = spaces.Box(
-                low=-np.inf,
-                high=np.inf,
+                low=-(10E10),
+                high=(10E10),
                 shape=(len(self.features), self.portfolio_size, self.time_window),
             )
         self.reset()
@@ -58,13 +58,12 @@ class Finance(gym.Env):
         
     def reset(self):
         self.time_index = self.time_window -1
-        self.actions_memory ={}
         self.memory = {}
         self.portifolio_value = self.initial_amount
-        self.df_returns = None
         self.temp_returns =[]
         self.returns =[]
-        self.state = self._get_current_state_from_date(self.initial_date)
+        current_date, _ = self._get_current_date()        
+        self.state = self._get_current_state_from_date(current_date)
         self.terminal= False
         self.reward = 0
         return self.state
@@ -119,9 +118,15 @@ class Finance(gym.Env):
         max_drawdown = cumulative_returns[peak] - cumulative_returns[trough]
         return max_drawdown
 
-    def _get_date_index(self):
+    def _get_current_date(self):
         current_date = self.dates[self.time_index]
         return (current_date, self.time_index)
+    
+    def _softmax_normalization(self, actions):
+        numerator = np.exp(actions)
+        denominator = np.sum(np.exp(actions))
+        softmax_output = numerator / denominator
+        return softmax_output
     
     def get_metrics(self):
         temp_info ={
@@ -156,8 +161,10 @@ class Finance(gym.Env):
 
     
     def step(self,actions):
+        actions = np.array(actions, dtype=np.float32)
+        actions = self._softmax_normalization(actions)
         actions = actions/np.sum(actions)
-        current_date, current_index = self._get_date_index()
+        current_date, current_index = self._get_current_date()
         if self.verbose:
             if (self.time_index-self.time_window +2)%(self.metrics_period)==0:
                 self.print_info(current_date)
@@ -187,9 +194,4 @@ class Finance(gym.Env):
         e = DummyVecEnv([lambda: self])
         obs = e.reset()
         return e, obs
-        
-        
-        
-        
-        
         
