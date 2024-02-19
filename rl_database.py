@@ -34,7 +34,8 @@ class RLDatabase():
         self.close_df = pd.DataFrame()
         self.tickers = tickers
         self.number_of_tickers_to_consider = number_of_tickers_to_consider
-        self.base_df_columns = ['USD/BRL',  'IBOV',  'SPX', 'DJI', 'NASDAQ']#'CDI', 'IPCA', 'SELIC', 'IGPM']
+        self.base_df_columns = ['USD/BRL',  'IBOV', 'BRAX11', 'SPX', 'DJI', 'NASDAQ',
+                                'ZR=F', 'ZS=F', 'KC=F', 'SB=F', 'BZ=F', 'CL=F', 'NG=F', 'GC=F', 'HG=F']#'CDI', 'IPCA', 'SELIC', 'IGPM']
         self.minimum_of_years = 0.8*(self.end_train - 
                                      self.start_train).days/365
         self.ohlcv_dfs= {}
